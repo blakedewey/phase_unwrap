@@ -12,4 +12,4 @@ COPY . /tmp/phase_unwrap-src
 RUN pip install --no-cache-dir /tmp/phase_unwrap-src/ && \
     rm -rf /tmp/phase_unwrap-src/
 
-ENTRYPOINT ["phase-unwrap"]
+ENTRYPOINT ["unwrap-phase"]

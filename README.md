@@ -8,15 +8,25 @@ If you use this code in your work, please cite:
 ```
 Blake E. Dewey. (2022). Laplacian-based Phase Unwrapping in Python. Zenodo. [https://doi.org/10.5281/zenodo.7198990](https://doi.org/10.5281/zenodo.7198991)
 ```
-## Install with `pip`
+
+## Install with pip
 ```bash
 pip install phase_unwrap
 ```
 
 ## Basic Usage
 ```bash
-phase-unwrap /path/to/phase_image.nii.gz
+unwrap-phase /path/to/phase_image.nii.gz
 ```
+This will produce an unwrapped phase image in the same directory as the input image with `_unwrapped` appended to the filename.
+
+**NOTE:** Some have reported the best results when the phase image is reoriented to the axial plane before unwrapping.
+This can be done with the `--orientation` option:
+```bash
+unwrap-phase /path/to/phase_image.nii.gz --orientation RAI
+```
+If you would like the unwrapped image returned in the original orientation, use the `--undo-reorient` option.
+
 ### CLI Options
 | Option            | Description                                                 | Default  |
 |-------------------|-------------------------------------------------------------|----------|
