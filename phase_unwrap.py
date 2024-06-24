@@ -120,7 +120,7 @@ def main(args=None):
 
     parsed.phase_image = parsed.phase_image.resolve()
     if parsed.output is None:
-        parsed.output = parsed.phase_image.parent / parsed.phase_image.replace(
+        parsed.output = parsed.phase_image.parent / parsed.phase_image.name.replace(
             ".nii.gz", "_unwrapped.nii.gz"
         )
     else:
