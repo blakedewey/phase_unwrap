@@ -20,7 +20,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
-          images: ghcr.io/blakedewey/phase_unwrap
+          images: blakedewey/phase_unwrap
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
