@@ -53,12 +53,19 @@ docker pull blakedewey/phase_unwrap:v2.0.0
 
 After pulling the image, you can run the unwrapping script with:
 ```bash
-docker run -v /path/to/data:/data blakedewey/phase_unwrap:v2.0.0 /data/phase_image.nii.gz
+docker run -it --rm -v /path/to/data:/data blakedewey/phase_unwrap:v2.0.0 /data/phase_image.nii.gz
 ```
 
 All of the same CLI options will work with the Docker container as well.
 Remember to mount the directory containing the data to a place in the container (`/data` in the example).
 You will also have to specify the path to the image relative to the mounted directory.
+
+## Upgrading from v1.0.0
+The CLI options have changed slightly from v1.0.0 to v2.0.0:
+ - The `-p`/`--phase-image` option has been replaced with a positional argument for the path to the phase image.
+ - In v1.0.0, image paths were assumed to be in `/data` for use in Docker. This is no longer the case. You must specify the full path to the image or output, even in the Docker container.
+ - In v1.0.0, the default for `--orientation` was `RAI`. This has been removed. If you want to reorient the image, you must specify the orientation. Use `--orientation RAI` to get the same behavior as v1.0.0.
+ - The `--undo-reorient` option has been added to return the image to the original orientation after unwrapping.
 
 ## Works Using This Code
 This processing has been used in a number of published manuscripts detailing phase-rim lesions in multiple sclerosis.
