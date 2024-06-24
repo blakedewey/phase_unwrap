@@ -8,6 +8,15 @@ ORIENT_DICT = {"R": "L", "A": "P", "I": "S", "L": "R", "P": "A", "S": "I"}
 GAUSS_STDEV = 10.0
 
 
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        custom_message = (
+            f"{message}\n\n"
+            f"See https://github.com/blakedewey/phase_unwrap for full instructions."
+        )
+        super().error(custom_message)
+
+
 def check_3d(obj: nib.Nifti1Image) -> nib.Nifti1Image:
     if len(obj.shape) > 3:
         print("Input image is 4D, assuming phase image is 2nd volume.")
@@ -112,17 +121,41 @@ def gauss(r: np.ndarray, std0: float) -> np.ndarray:
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("phase_image", type=Path)
-    parser.add_argument("-o", "--output", type=Path)
-    parser.add_argument("--orientation", type=str)
-    parser.add_argument('--undo-reorient', action='store_true')
+    print(
+        "\n"
+        "If you are using this software in a publication, please cite the following:\n"
+        "Blake E. Dewey. (2022). Laplacian-based Phase Unwrapping in Python. Zenodo. "
+        "https://doi.org/10.5281/zenodo.7198990"
+        "\n"
+    )
+    parser = ArgumentParser(
+        description="Unwrap MRI phase images using Laplacian-based phase unwrapping. "
+        "See https://github.com/blakedewey/phase_unwrap for full instructions."
+    )
+    parser.add_argument(
+        "phase_image",
+        metavar="PHASE_IMAGE",
+        type=Path,
+        help="Path to input phase image",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="Optional output filepath. Default is ${PHASE_IMAGE}_unwrapped.nii.gz",
+    )
+    parser.add_argument(
+        "--orientation",
+        type=str,
+        choices=("RAI", "RSA", "ASR"),
+        help="Orientation for unwrapping",
+    )
+    parser.add_argument(
+        "--undo-reorient",
+        action="store_true",
+        help="Undo reorientation after unwrapping",
+    )
     parsed = parser.parse_args(args)
-
-    print("""
-    If you are using this software in a publication, please cite the following:
-    Blake E. Dewey. (2022). Laplacian-based Phase Unwrapping in Python. Zenodo. https://doi.org/10.5281/zenodo.7198990
-    """)
 
     parsed.phase_image = parsed.phase_image.resolve()
     if parsed.output is None:
@@ -132,9 +165,14 @@ def main(args=None):
     else:
         parsed.output = parsed.output.resolve()
 
+    if not parsed.phase_image.exists():
+        parser.error(f"Input file not found: {parsed.phase_image}")
+    if not parsed.output.parent.exists():
+        parser.error(f"Output directory not found: {parsed.output.parent}")
+
     obj = nib.Nifti1Image.load(parsed.phase_image)
 
-    orig_orientation = ''.join([ORIENT_DICT[i] for i in nib.aff2axcodes(obj.affine)])
+    orig_orientation = "".join([ORIENT_DICT[i] for i in nib.aff2axcodes(obj.affine)])
     obj = reorient(check_3d(obj), parsed.orientation)
 
     filter_obj = unwrap_phase(obj)
