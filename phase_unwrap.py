@@ -1,11 +1,8 @@
 import argparse
-import os
 from pathlib import Path
 
 import nibabel as nib
 import numpy as np
-
-np.seterr(all="ignore")
 
 ORIENT_DICT = {"R": "L", "A": "P", "I": "S", "L": "R", "P": "A", "S": "I"}
 GAUSS_STDEV = 10.0
@@ -19,6 +16,8 @@ def check_3d(obj: nib.Nifti1Image) -> nib.Nifti1Image:
 
 
 def reorient(obj: nib.Nifti1Image, orientation: str) -> nib.Nifti1Image:
+    if orientation is None:
+        return obj
     target_orient = [ORIENT_DICT[char] for char in orientation]
     if nib.aff2axcodes(obj.affine) != tuple(target_orient):
         orig_ornt = nib.orientations.io_orientation(obj.affine)
@@ -58,16 +57,17 @@ def unwrap_phase(phase_obj: nib.Nifti1Image) -> nib.Nifti1Image:
     hp1 = gauss_filter(dim[0], GAUSS_STDEV, dim[1], GAUSS_STDEV)
 
     filter_phase = np.zeros_like(norm_phase)
-    for i in range(dim[2]):
-        z_slice = norm_phase[:, :, i]
-        lap_sin = -4.0 * (np.pi**2) * icfft(kk2 * cfft(np.sin(z_slice)))
-        lap_cos = -4.0 * (np.pi**2) * icfft(kk2 * cfft(np.cos(z_slice)))
-        lap_theta = np.cos(z_slice) * lap_sin - np.sin(z_slice) * lap_cos
-        tmp = np.array(-cfft(lap_theta) / (4.0 * (np.pi**2) * kk2))
-        tmp[np.isnan(tmp)] = 1.0
-        tmp[np.isinf(tmp)] = 1.0
-        kx2 = tmp * (1 - hp1)
-        filter_phase[:, :, i] = np.real(icfft(kx2))
+    with np.errstate(divide="ignore"):
+        for i in range(dim[2]):
+            z_slice = norm_phase[:, :, i]
+            lap_sin = -4.0 * (np.pi**2) * icfft(kk2 * cfft(np.sin(z_slice)))
+            lap_cos = -4.0 * (np.pi**2) * icfft(kk2 * cfft(np.cos(z_slice)))
+            lap_theta = np.cos(z_slice) * lap_sin - np.sin(z_slice) * lap_cos
+            tmp = np.array(-cfft(lap_theta) / (4.0 * (np.pi**2) * kk2))
+            tmp[np.isnan(tmp)] = 1.0
+            tmp[np.isinf(tmp)] = 1.0
+            kx2 = tmp * (1 - hp1)
+            filter_phase[:, :, i] = np.real(icfft(kx2))
 
     filter_phase[filter_phase > np.pi] = np.pi
     filter_phase[filter_phase < -np.pi] = -np.pi
@@ -113,10 +113,7 @@ def main(args=None):
     parser.add_argument("phase_image", type=Path)
     parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("--orientation", type=str)
-    parser.add_argument("--threads", type=int, default=1)
     parsed = parser.parse_args(args)
-
-    os.environ["OMP_NUM_THREADS"] = str(parsed.threads)
 
     parsed.phase_image = parsed.phase_image.resolve()
     if parsed.output is None:
