@@ -110,7 +110,7 @@ def gauss(r: np.ndarray, std0: float) -> np.ndarray:
 
 def main(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("phase-image", type=Path)
+    parser.add_argument("phase_image", type=Path)
     parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("--orientation", type=str)
     parser.add_argument("--threads", type=int, default=1)
