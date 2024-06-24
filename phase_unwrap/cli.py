@@ -10,6 +10,7 @@ GAUSS_STDEV = 10.0
 
 def check_3d(obj: nib.Nifti1Image) -> nib.Nifti1Image:
     if len(obj.shape) > 3:
+        print("Input image is 4D, assuming phase image is 2nd volume.")
         obj_list = nib.four_to_three(obj)
         obj = obj_list[1]  # Assume phase image is 2nd volume
     return obj
@@ -20,6 +21,7 @@ def reorient(obj: nib.Nifti1Image, orientation: str) -> nib.Nifti1Image:
         return obj
     target_orient = [ORIENT_DICT[char] for char in orientation]
     if nib.aff2axcodes(obj.affine) != tuple(target_orient):
+        print(f"Reorienting image to {orientation}.")
         orig_ornt = nib.orientations.io_orientation(obj.affine)
         targ_ornt = nib.orientations.axcodes2ornt(target_orient)
         ornt_xfm = nib.orientations.ornt_transform(orig_ornt, targ_ornt)
@@ -31,6 +33,7 @@ def reorient(obj: nib.Nifti1Image, orientation: str) -> nib.Nifti1Image:
 
 
 def unwrap_phase(phase_obj: nib.Nifti1Image) -> nib.Nifti1Image:
+    print("Unwrapping phase image.")
     phase_data = phase_obj.get_fdata().astype(np.float32)
     if phase_data.max() > 3.15:
         if phase_data.min() >= 0:
@@ -57,7 +60,7 @@ def unwrap_phase(phase_obj: nib.Nifti1Image) -> nib.Nifti1Image:
     hp1 = gauss_filter(dim[0], GAUSS_STDEV, dim[1], GAUSS_STDEV)
 
     filter_phase = np.zeros_like(norm_phase)
-    with np.errstate(divide="ignore"):
+    with np.errstate(divide="ignore", invalid="ignore"):
         for i in range(dim[2]):
             z_slice = norm_phase[:, :, i]
             lap_sin = -4.0 * (np.pi**2) * icfft(kk2 * cfft(np.sin(z_slice)))
@@ -113,7 +116,13 @@ def main(args=None):
     parser.add_argument("phase_image", type=Path)
     parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("--orientation", type=str)
+    parser.add_argument('--undo-reorient', action='store_true')
     parsed = parser.parse_args(args)
+
+    print("""
+    If you are using this software in a publication, please cite the following:
+    Blake E. Dewey. (2022). Laplacian-based Phase Unwrapping in Python. Zenodo. https://doi.org/10.5281/zenodo.7198990
+    """)
 
     parsed.phase_image = parsed.phase_image.resolve()
     if parsed.output is None:
@@ -123,13 +132,14 @@ def main(args=None):
     else:
         parsed.output = parsed.output.resolve()
 
-    obj = reorient(
-        check_3d(nib.Nifti1Image.load(parsed.phase_image)),
-        parsed.orientation,
-    )
+    obj = nib.Nifti1Image.load(parsed.phase_image)
+
+    orig_orientation = ''.join([ORIENT_DICT[i] for i in nib.aff2axcodes(obj.affine)])
+    obj = reorient(check_3d(obj), parsed.orientation)
+
     filter_obj = unwrap_phase(obj)
+
+    if parsed.undo_reorient:
+        filter_obj = reorient(filter_obj, orig_orientation)
+
     filter_obj.to_filename(parsed.output)
-
-
-if __name__ == "__main__":
-    main()

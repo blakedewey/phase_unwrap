@@ -3,7 +3,9 @@ FROM python:3.12.4-slim-bookworm
 # Install required packages
 RUN pip install nibabel numpy
 
-# Get python scripts
-COPY phase_unwrap.py /opt
+# Install python package
+COPY phase_unwrap /tmp
 
-ENTRYPOINT ["python", "/opt/phase_unwrap.py"]
+RUN pip install /tmp/phase_unwrap
+
+ENTRYPOINT ["phase-unwrap"]
