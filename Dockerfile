@@ -4,8 +4,9 @@ FROM python:3.12.4-slim-bookworm
 RUN pip install nibabel numpy
 
 # Install python package
-COPY phase_unwrap /tmp
+COPY . /tmp/phase_unwrap-src
 
-RUN pip install /tmp/phase_unwrap
+RUN pip install --no-cache-dir /tmp/phase_unwrap-src/ && \
+    rm -rf /tmp/phase_unwrap-src/
 
 ENTRYPOINT ["phase-unwrap"]
